@@ -115,11 +115,11 @@ for (var i = 0; i < limits.length; i++) {
   if (i === 0) {
     colorRange = "No Data";
   } else if (i === 1) {
-    colorRange = "Eat at Your Own Peril";
+    colorRange = "Eat at Your Own Risk";
   } else if (i === 2) {
     colorRange = "Needs Improvement";
   } else if (i === 3) {
-    colorRange = "Definitely No Tummy Aches";
+    colorRange = "Best Ratings";
   }
   div.innerHTML +=
     '<i style="background:' + colors[i] + '"></i> ' +
