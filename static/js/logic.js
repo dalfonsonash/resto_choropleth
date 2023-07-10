@@ -102,7 +102,7 @@ d3.json("https://data.sfgov.org/resource/pyih-qa8i.json").then(function(data) {
 var legend = L.control({ position: "bottomright" });
 legend.onAdd = function() {
   var div = L.DomUtil.create("div", "legend");
-  var limits = ["No Data", "Eat at Your Own Peril", "Needs Improvement", "Definitely No Tummy Aches"];
+  var limits = ["No Data", "Eat at Your Own Risk", "Needs Improvement", "Best Ratings"];
   var colors = ["gray", "red", "#FFFF00", "#008000"];
   let labels = [];
 
