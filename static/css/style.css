@@ -15,6 +15,9 @@ body {
     font-size: 14px;
     line-height: 18px;
     color: #555;
+    width: 200px;
+    height: 200px;
+    overflow-y: auto;
   }
   
   .legend h4 {
@@ -27,5 +30,41 @@ body {
     float: left;
     margin-right: 8px;
     opacity: 0.8;
+  }
+  
+  .legend-image img {
+    display: block;
+    margin-bottom: 10px;
+    max-width: 100%;
+    height: auto;
+  }
+
+  
+  .score {
+    background-color: #4CAF50; /* Green */
+    color: white;
+    padding: 2px 4px;
+    border-radius: 4px;
+  }
+  
+  .highest-score {
+    background-color: #4CAF50; /* Green */
+    color: white;
+    padding: 2px 4px;
+    border: 1px solid #4CAF50;
+    border-radius: 4px;
+  }
+  
+  .lowest-score {
+    background-color: #FF0000; /* Red */
+    color: white;
+    padding: 2px 4px;
+    border: 1px solid #FF0000;
+    border-radius: 4px;
+  }
+  
+  .leaflet-popup-content {
+    max-height: 200px;
+    overflow-y: auto;
   }
   

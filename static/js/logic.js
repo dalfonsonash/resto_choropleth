@@ -10,149 +10,182 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 }).addTo(myMap);
 
 // D3 to get the JSON data
-d3.json("https://data.sfgov.org/resource/pyih-qa8i.json").then(function(data) {
-  // Filter out businesses without zip codes or inspection scores
-  let filteredData = data.filter(item => item.business_postal_code && item.inspection_score !== undefined);
-
-  // Create an object to hold the inspection scores for each zip code
-  let inspectionScores = {};
-
-  // Iterate over the filtered data and store inspection scores by zip code
-  filteredData.forEach(item => {
-    let zipCode = item.business_postal_code;
-    let inspectionScore = parseFloat(item.inspection_score);
-
-    // Check if the zip code exists in the inspectionScores object
-    if (zipCode in inspectionScores) {
-      inspectionScores[zipCode].push(inspectionScore);
-    } else {
-      inspectionScores[zipCode] = [inspectionScore];
-    }
-  });
-
-  // Output inspection score averages and all inspection scores
-  Object.entries(inspectionScores).forEach(([zipCode, scores]) => {
-    let average = Math.round(scores.reduce((total, score) => total + score, 0) / scores.length);
-    inspectionScores[zipCode] = average; // Update inspectionScores object with rounded average score
-    console.log(`Zip Code: ${zipCode}, Average Inspection Score: ${average}`);
-    console.log(`Inspection Scores for ${zipCode}: ${scores}`);
-  });
-  
+d3.json("https://data.sfgov.org/resource/6ia5-2f8k.json").then(function(neighborhoodData) {
+  // Convert JSON data to GeoJSON format
+  let geojson = {
+    type: "FeatureCollection",
+    features: neighborhoodData.map(item => {
+      return {
+        type: "Feature",
+        properties: {
+          name: item.name,
+          coordinates: item.the_geom.coordinates
+        },
+        geometry: {
+          type: "MultiPolygon",
+          coordinates: item.the_geom.coordinates
+        }
+      };
+    })
+  };
 
   // D3 to get the JSON data
-  d3.json("https://data.sfgov.org/resource/srq6-hmpi.json").then(function(jsonData) {
-    // Convert JSON data to GeoJSON format
-    let geojson = {
-      type: "FeatureCollection",
-      features: jsonData.map(item => {
-        return {
-          type: "Feature",
-          properties: item,
-          geometry: {
-            type: "Polygon",
-            coordinates: item.geometry.coordinates
+  d3.json("https://data.sfgov.org/resource/pyih-qa8i.json").then(function(inspectionData) {
+    // Create an object to hold the inspection scores for each neighborhood
+    let inspectionScores = {};
+
+    let uniqueBusinesses = new Set();
+
+    // Group inspection scores by neighborhood
+    inspectionData.forEach(item => {
+      if (item.business_location && item.inspection_score !== undefined) {
+        let businessCoordinates = item.business_location.coordinates;
+        let inspectionScore = parseFloat(item.inspection_score);
+        // Check if the business coordinates fall within any neighborhood's coordinates
+        let neighborhood = geojson.features.find(feature =>
+          turf.booleanPointInPolygon(turf.point(businessCoordinates), feature.geometry)
+        );
+        if (neighborhood) {
+          let neighborhoodCoordinates = JSON.stringify(neighborhood.geometry.coordinates);
+          if (neighborhoodCoordinates in inspectionScores) {
+            inspectionScores[neighborhoodCoordinates].push(inspectionScore);
+          } else {
+            inspectionScores[neighborhoodCoordinates] = [inspectionScore];
           }
-        };
-      })
-    };
+          uniqueBusinesses.add(item.business_name); // Add business name to the Set
+        }
+      }
+    });
 
-    // Iterate over the geojson features and calculate the average inspection score for each zip code
+    // Get the total number of unique businesses
+    let totalBusinessesWithScores = uniqueBusinesses.size;
+
+
+    console.log("Total Businesses with Inspection Scores:", totalBusinessesWithScores);
+  
+    // Iterate over the geojson features and calculate the average inspection score for each neighborhood
     geojson.features.forEach(feature => {
-      let zipCode = feature.properties.zip_code || feature.properties.zip || feature.properties.business_postal_code;
-
-      // Check if the zip code exists in the inspectionScores object
-      if (zipCode in inspectionScores) {
-        let score = inspectionScores[zipCode];
-        feature.properties.average_inspection_score = score;
+      let coordinates = JSON.stringify(feature.geometry.coordinates);
+      // Check if the coordinates exist in the inspectionScores object
+      if (coordinates in inspectionScores) {
+        let scores = inspectionScores[coordinates];
+        let numericScores = scores.map(score => parseFloat(score)); // Convert scores to numbers
+        let average = Math.round(numericScores.reduce((total, score) => total + score, 0) / numericScores.length);
+        feature.properties.average_inspection_score = average;
       } else {
         feature.properties.average_inspection_score = undefined;
       }
     });
-
-    // Determine the minimum and maximum inspection scores
-    let scores = Object.values(inspectionScores).filter(score => score !== undefined);
-    let minScore = Math.min(...scores);
-    let maxScore = Math.max(...scores);
-
     // Create the choropleth layer using L.choropleth
-let choroplethLayer = L.choropleth(geojson, {
-  valueProperty: "average_inspection_score",
-  scale: ["#808080", "red", "yellow", "green"], // Gray, Red, Yellow, Green for the color scale
-  steps: 4,
-  mode: "q",
-  style: {
-    color: "blue",
-    weight: 0.5,
-    fillOpacity: 0.7
-  },
-  onEachFeature: (feature, layer) => {
-    let zipCode = feature.properties.zip_code || feature.properties.zip || feature.properties.business_postal_code;
-    let score = feature.properties.average_inspection_score;
-    let popupContent = "SF Public Health Data" + "<br>" + "Zip Code: " + zipCode + "<br>";
+    let choroplethLayer = L.choropleth(geojson, {
+      valueProperty: "average_inspection_score",
+      scale: 'viridis', // Gray, Red, Yellow, Green for the color scale
+      steps: 4,
+      mode: "q",
+      style: function (feature) {
+        return {
+          color: "black",
+          fillColor: feature.properties.average_inspection_score,
+          weight: 1,
+          fillOpacity: 0.5
+        };
+      },
+      onEachFeature: function (feature, layer) {
+        let neighborhood = feature.properties.name;
+        let score = feature.properties.average_inspection_score;
+        let popupContent = "Neighborhood: " + neighborhood + "<br>";
+        if (score !== undefined) {
+          popupContent += "Average Inspection Score: " + (score ? score.toFixed(0) : "No data");
+        } else {
+          popupContent += "No data";
+        }
+        
+        // Variables to store business count, highest score, lowest score, and their respective business names
+        let businessCount = 0;
+        let highestScore = -Infinity;
+        let lowestScore = Infinity;
+        let highestBusiness = "";
+        let lowestBusiness = "";
+        
+        // Calculate business count, highest score, and lowest score for each neighborhood
+        inspectionData.forEach(item => {
+          if (
+            item.business_location &&
+            item.inspection_score !== undefined &&
+            turf.booleanPointInPolygon(turf.point(item.business_location.coordinates), feature.geometry)
+          ) {
+            businessCount++;
+            let inspectionScore = parseFloat(item.inspection_score);
+            if (inspectionScore > highestScore) {
+              highestScore = inspectionScore;
+              highestBusiness = item.business_name;
+            }
+            if (inspectionScore < lowestScore) {
+              lowestScore = inspectionScore;
+              lowestBusiness = item.business_name;
+            }
+          }
+        });
+        
+        // Update the popupContent to include business count, highest score, and lowest score with their respective business names
+        popupContent += "<br>Business Count: " + businessCount; // Add business count to the popup
+        popupContent += "<br>Highest Score: <span class='highest-score score'>" + (highestScore !== -Infinity ? highestScore : "N/A") + "</span> (Business: " + (highestBusiness !== "" ? highestBusiness : "N/A") + ")"; // Add highest score and business name
+        popupContent += "<br>Lowest Score: <span class='lowest-score score'>" + (lowestScore !== Infinity ? lowestScore : "N/A") + "</span> (Business: " + (lowestBusiness !== "" ? lowestBusiness : "N/A") + ")"; // Add lowest score and business name
+        
+        layer.bindPopup(popupContent, {
+          closeButton: true // Enable the default close button
+        });
+        
+        layer.on("click", function () {
+          // Log the feature data
+          console.log("Feature:", feature);
+          console.log("Average Inspection Score:", score);
+          console.log("Business Count:", businessCount);
+          console.log("Highest Score:", highestScore, "(Business:", highestBusiness + ")");
+          console.log("Lowest Score:", lowestScore, "(Business:", lowestBusiness + ")");
+        });
+        
+        layer.on("popupclose", function () {
+          layer.setStyle({
+            weight: 1 // Reset the layer style when the popup is closed
+          });
+        });
+        
+        layer.on("popupopen", function () {
+          layer.setStyle({
+            weight: 3 // Increase the layer weight when the popup is opened
+          });
+        });
+      }
+     
+      
+  }).addTo(myMap);
 
-    if (score !== undefined) {
-      popupContent += "Average Inspection Score: " + (score ? score.toFixed(0) : "No data");
-    } else {
-      popupContent += "No data";
-    }
-
-    layer.bindPopup(popupContent);
-
-    layer.on("click", () => {
-      console.log(feature); // Log the feature data when clicked on the map
-    });
-  },
-  
-  // Assigning color range based on avg. insp. score.
-  getColor: (value) => {
-    if (value === undefined) {
-      return "#808080"; // Assign gray color to "No Data"
-    } else if (value >= 90) {
-      return "green"; // Assign green color to range 90 and above
-    } else if (value >= 85) {
-      return "yellow"; // Assign yellow color to range 85-89
-    } else if (value >= 81) {
-      return "red"; // Assign red color to range 81-84
-    } else {
-      return "#808080"; // Assign gray color to any other value outside the specified ranges
-    }
-  }
-  
-  
-}).addTo(myMap);
-
-// Set up the legend.
-var legend = L.control({ position: "bottomright" });
-legend.onAdd = function() {
-  var div = L.DomUtil.create("div", "legend");
-  var limits = ["No Data", "81-84", "85-89", "90-100"];
-  var colors = ["#808080", "red", "yellow", "green"];
-
-  let labels = [];
-
-  // Add the legend title.
-  div.innerHTML += '<h4 style="text-align: center;">SF Public Health Inspection Scores<br><span style="font-size: 14px; font-weight: bold;">by zip code</span></h4>';
-
-  // Create the legend color bar.
-  for (var i = 0; i < limits.length; i++) {
-    var colorRange = limits[i];
-    div.innerHTML +=
-      '<i style="background:' + colors[i] + '"></i> ' +
-      colorRange + '<br>';
-  }
-
-  return div;
-};
-
-// Adding the legend to the map
-legend.addTo(myMap);
-
-
-
+    // Set up the legend
+    var legend = L.control({ position: "bottomright" });
+    legend.onAdd = function() {
+      var div = L.DomUtil.create("div", "legend");
+      var limits = ["65-70", "70-75", "75-80", "80-85", "85-90", "90-95", "95-100"];
+      var colors = ["#440154", "#482878", "#3E4A89", "#31688E", "#26828E", "#1F9E89", "#35B779"];
+      let labels = [];
+      // Add the legend title.
+      div.innerHTML += '<h4 style="text-align: center;">SF Public Restaurant Sanitation Inspection Scores<br><span style="font-size: 14px; font-weight: bold;">(by neighborhood)</span></h4>';
+      // Create the legend color bar.
+      for (var i = 0; i < limits.length; i++) {
+        var colorRange = limits[i];
+        div.innerHTML +=
+          '<i style="background:' + colors[i] + '"></i> ' +
+          colorRange + '<br>';
+      }
+      return div;
+    };
+    // Adding the legend to the map
+    legend.addTo(myMap);
     // Fit the map bounds to the choropleth layer
     myMap.fitBounds(choroplethLayer.getBounds());
-  })
-  .catch(function(error) {
-    console.error('Error fetching JSON data:', error);
+  }).catch(function(error) {
+    console.error("Error fetching inspection data:", error);
   });
+}).catch(function(error) {
+  console.error("Error fetching neighborhood data:", error);
 });
