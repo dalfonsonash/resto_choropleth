@@ -162,14 +162,24 @@ d3.json("https://data.sfgov.org/resource/6ia5-2f8k.json").then(function(neighbor
   }).addTo(myMap);
 
     // Set up the legend
-    var legend = L.control({ position: "bottomright" });
-    legend.onAdd = function() {
-      var div = L.DomUtil.create("div", "legend");
-      var limits = ["65-70", "70-75", "75-80", "80-85", "85-90", "90-95", "95-100"];
-      var colors = ["#440154", "#482878", "#3E4A89", "#31688E", "#26828E", "#1F9E89", "#35B779"];
-      let labels = [];
+      var legend = L.control({ position: "topright" });
+      legend.onAdd = function() {
+        var div = L.DomUtil.create("div", "legend");
+        var steps = 7; // Number of steps
+        var startColor = '#440154'; // Start color (green)
+        var middleColor = "#31688E"; // Middle color
+        var endColor = "yellow"; // End color (yellow)
+      
+        // Generate the color scale using Chroma.js
+        var colors = chroma.scale([startColor, middleColor, endColor]).colors(steps);
+      
+      
+      // Generate the legend based on the colors
+        var limits = ["65-70", "70-75", "75-80", "80-85", "85-90", "90-95", "95-100"];
+      
+        let labels = [];
       // Add the legend title.
-      div.innerHTML += '<h4 style="text-align: center;">City of San Francisco Public Health Sanitation Inspection Scores<br><span style="font-size: 14px; font-weight: bold;">(eating establishments by neighborhood)</span></h4>';
+      div.innerHTML += '<h4 style="text-align: center;">City of San Francisco Public Health<br>Restaurant Sanitation Inspection Scores<br><span style="font-size: 14px; font-weight: bold;">(by neighborhood)</span></h4>';
       // Create the legend color bar.
       for (var i = 0; i < limits.length; i++) {
         var colorRange = limits[i];

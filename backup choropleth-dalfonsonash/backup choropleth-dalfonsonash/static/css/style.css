@@ -1,0 +1,58 @@
+.h {
+  background-color: #abd1c6;
+  padding: 10px;
+}
+
+body {
+    padding: 0;
+    margin: 0;
+  }
+  
+  #map,
+  body,
+  html {
+    height: 100%;
+  }
+  
+  .legend {
+    background-color: #fff;
+    padding: 10px;
+    font-size: 14px;
+    line-height: 18px;
+    color: #555;
+  }
+  
+  .legend h4 {
+    margin: 0 0 14px;
+  }
+  
+  .legend i {
+    width: 18px;
+    height: 18px;
+    float: left;
+    margin-right: 8px;
+    opacity: 0.8;
+  }
+  .score {
+    background-color: #4CAF50; /* Green */
+    color: white;
+    padding: 2px 4px;
+    border-radius: 4px;
+  }
+  
+  .highest-score {
+    background-color: #4CAF50; /* Green */
+    color: white;
+    padding: 2px 4px;
+    border: 1px solid #4CAF50;
+    border-radius: 4px;
+  }
+  
+  .lowest-score {
+    background-color: #FF0000; /* Red */
+    color: white;
+    padding: 2px 4px;
+    border: 1px solid #FF0000;
+    border-radius: 4px;
+  }
+  
