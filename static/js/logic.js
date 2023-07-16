@@ -46,13 +46,14 @@ d3.json("https://data.sfgov.org/resource/6ia5-2f8k.json").then(function(neighbor
           turf.booleanPointInPolygon(turf.point(businessCoordinates), feature.geometry)
         );
         if (neighborhood) {
+          let businessIdentifier = item.business_name; // Use business_name as the unique identifier
           let neighborhoodCoordinates = JSON.stringify(neighborhood.geometry.coordinates);
           if (neighborhoodCoordinates in inspectionScores) {
             inspectionScores[neighborhoodCoordinates].push(inspectionScore);
           } else {
             inspectionScores[neighborhoodCoordinates] = [inspectionScore];
           }
-          uniqueBusinesses.add(item.business_name); // Add business name to the Set
+          uniqueBusinesses.add(businessIdentifier); // Add business identifier to the Set
         }
       }
     });
@@ -60,9 +61,8 @@ d3.json("https://data.sfgov.org/resource/6ia5-2f8k.json").then(function(neighbor
     // Get the total number of unique businesses
     let totalBusinessesWithScores = uniqueBusinesses.size;
 
+    //console.log("Total Businesses with Inspection Scores:", totalBusinessesWithScores);
 
-    console.log("Total Businesses with Inspection Scores:", totalBusinessesWithScores);
-  
     // Iterate over the geojson features and calculate the average inspection score for each neighborhood
     geojson.features.forEach(feature => {
       let coordinates = JSON.stringify(feature.geometry.coordinates);
@@ -76,6 +76,7 @@ d3.json("https://data.sfgov.org/resource/6ia5-2f8k.json").then(function(neighbor
         feature.properties.average_inspection_score = undefined;
       }
     });
+
     // Create the choropleth layer using L.choropleth
     let choroplethLayer = L.choropleth(geojson, {
       valueProperty: "average_inspection_score",
@@ -99,14 +100,14 @@ d3.json("https://data.sfgov.org/resource/6ia5-2f8k.json").then(function(neighbor
         } else {
           popupContent += "No data";
         }
-        
+
         // Variables to store business count, highest score, lowest score, and their respective business names
         let businessCount = 0;
         let highestScore = -Infinity;
         let lowestScore = Infinity;
         let highestBusiness = "";
         let lowestBusiness = "";
-        
+
         // Calculate business count, highest score, and lowest score for each neighborhood
         inspectionData.forEach(item => {
           if (
@@ -126,16 +127,16 @@ d3.json("https://data.sfgov.org/resource/6ia5-2f8k.json").then(function(neighbor
             }
           }
         });
-        
+
         // Update the popupContent to include business count, highest score, and lowest score with their respective business names
         popupContent += "<br>Business Count: " + businessCount; // Add business count to the popup
         popupContent += "<br>Highest Score: <span class='highest-score score'>" + (highestScore !== -Infinity ? highestScore : "N/A") + "</span> (Business: " + (highestBusiness !== "" ? highestBusiness : "N/A") + ")"; // Add highest score and business name
         popupContent += "<br>Lowest Score: <span class='lowest-score score'>" + (lowestScore !== Infinity ? lowestScore : "N/A") + "</span> (Business: " + (lowestBusiness !== "" ? lowestBusiness : "N/A") + ")"; // Add lowest score and business name
-        
+
         layer.bindPopup(popupContent, {
           closeButton: true // Enable the default close button
         });
-        
+
         layer.on("click", function () {
           // Log the feature data
           console.log("Feature:", feature);
@@ -144,40 +145,37 @@ d3.json("https://data.sfgov.org/resource/6ia5-2f8k.json").then(function(neighbor
           console.log("Highest Score:", highestScore, "(Business:", highestBusiness + ")");
           console.log("Lowest Score:", lowestScore, "(Business:", lowestBusiness + ")");
         });
-        
+
         layer.on("popupclose", function () {
           layer.setStyle({
             weight: 1 // Reset the layer style when the popup is closed
           });
         });
-        
+
         layer.on("popupopen", function () {
           layer.setStyle({
             weight: 3 // Increase the layer weight when the popup is opened
           });
         });
       }
-     
-      
-  }).addTo(myMap);
+    }).addTo(myMap);
 
     // Set up the legend
-      var legend = L.control({ position: "topright" });
-      legend.onAdd = function() {
-        var div = L.DomUtil.create("div", "legend");
-        var steps = 7; // Number of steps
-        var startColor = '#440154'; // Start color (green)
-        var middleColor = "#31688E"; // Middle color
-        var endColor = "yellow"; // End color (yellow)
-      
-        // Generate the color scale using Chroma.js
-        var colors = chroma.scale([startColor, middleColor, endColor]).colors(steps);
-      
-      
+    var legend = L.control({ position: "topright" });
+    legend.onAdd = function() {
+      var div = L.DomUtil.create("div", "legend");
+      var steps = 7; // Number of steps
+      var startColor = '#440154'; // Start color (green)
+      var middleColor = "#31688E"; // Middle color
+      var endColor = "yellow"; // End color (yellow)
+
+      // Generate the color scale using Chroma.js
+      var colors = chroma.scale([startColor, middleColor, endColor]).colors(steps);
+
       // Generate the legend based on the colors
-        var limits = ["65-70", "70-75", "75-80", "80-85", "85-90", "90-95", "95-100"];
-      
-        let labels = [];
+      var limits = ["65-70", "70-75", "75-80", "80-85", "85-90", "90-95", "95-100"];
+
+      let labels = [];
       // Add the legend title.
       div.innerHTML += '<h4 style="text-align: center;">City of San Francisco Public Health<br>Restaurant Sanitation Inspection Scores<br><span style="font-size: 14px; font-weight: bold;">(by neighborhood)</span></h4>';
       // Create the legend color bar.
@@ -193,6 +191,45 @@ d3.json("https://data.sfgov.org/resource/6ia5-2f8k.json").then(function(neighbor
     legend.addTo(myMap);
     // Fit the map bounds to the choropleth layer
     myMap.fitBounds(choroplethLayer.getBounds());
+
+    // Event handler for when a neighborhood is clicked on the map
+    // Event handler for when a neighborhood is clicked on the map
+    // Event handler for when a neighborhood is clicked on the map
+function onNeighborhoodClick(event) {
+  let neighborhood = event.target.feature.properties.name;
+  let neighborhoodPolygon = event.target.feature.geometry;
+
+  let businesses = inspectionData.filter(item => {
+    if (item.business_location && item.inspection_score !== undefined) {
+      let businessCoordinates = item.business_location.coordinates;
+      let point = turf.point(businessCoordinates);
+      return turf.booleanPointInPolygon(point, neighborhoodPolygon);
+    }
+    return false;
+  });
+
+  let businessNames = businesses.map(item => item.business_name);
+  console.log("Businesses in", neighborhood, ":", businessNames);
+
+  let unmappedBusinesses = inspectionData.filter(item => {
+    if (item.business_location && item.inspection_score !== undefined) {
+      let businessCoordinates = item.business_location.coordinates;
+      let point = turf.point(businessCoordinates);
+      return !turf.booleanPointInPolygon(point, neighborhoodPolygon);
+    }
+    return false;
+  });
+
+  console.log("Businesses with Inspection Scores not mapped:", unmappedBusinesses.length);
+}
+   
+
+
+    // Bind the click event to the choropleth layer
+    choroplethLayer.eachLayer(layer => {
+      layer.on("click", onNeighborhoodClick);
+    });
+
   }).catch(function(error) {
     console.error("Error fetching inspection data:", error);
   });
