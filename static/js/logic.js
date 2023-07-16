@@ -220,7 +220,7 @@ function onNeighborhoodClick(event) {
     return false;
   });
 
-  console.log("Businesses with Inspection Scores not mapped:", unmappedBusinesses.length);
+  //console.log("Businesses with Inspection Scores not mapped:", unmappedBusinesses.length);
 }
    
 
