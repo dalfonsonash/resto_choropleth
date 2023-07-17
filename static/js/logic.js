@@ -31,10 +31,12 @@ d3.json("https://data.sfgov.org/resource/6ia5-2f8k.json").then(function(neighbor
 
   // D3 to get the JSON data
   d3.json("https://data.sfgov.org/resource/pyih-qa8i.json").then(function(inspectionData) {
-    // Create an object to hold the inspection scores for each neighborhood
+    console.log("Total Businesses Represented on the Map:", inspectionData.length);
+  
+  // Create an object to hold the inspection scores and business names for each neighborhood
     let inspectionScores = {};
 
-    let uniqueBusinesses = new Set();
+    let uniqueBusinesses = new Set(); // In JS 'Set' prevents duplicate values.
 
     // Group inspection scores by neighborhood
     inspectionData.forEach(item => {
